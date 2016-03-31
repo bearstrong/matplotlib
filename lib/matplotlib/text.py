@@ -129,6 +129,7 @@ docstring.interpd.update(Text="""
     x                          float
     y                          float
     zorder                     any number
+    trans_rotate               [True | False]
     ========================== ===============================================
     """)
 
@@ -197,6 +198,7 @@ class Text(Artist):
                  rotation_mode=None,
                  usetex=None,          # defaults to rcParams['text.usetex']
                  wrap=False,
+                 trans_rotate=None,
                  **kwargs
                  ):
         """
@@ -232,6 +234,7 @@ class Text(Artist):
             linespacing = 1.2   # Maybe use rcParam later.
         self._linespacing = linespacing
         self.set_rotation_mode(rotation_mode)
+        self.set_trans_rotate(trans_rotate)
         self.update(kwargs)
 
     def update(self, kwargs):
@@ -311,6 +314,19 @@ class Text(Artist):
     def get_rotation_mode(self):
         "get text rotation mode"
         return self._rotation_mode
+
+    def set_trans_rotate(self, tr):
+        """
+        Sets whether or not the text is to rotate
+        with the transformation
+        """
+        self._trans_rotate = bool(tr)
+        self.stale = True
+
+
+    def get_trans_rotate(self):
+        "get transform rotation boolean"
+        return self._trans_rotate
 
     def update_from(self, other):
         'Copy properties from other to self'
@@ -753,9 +769,16 @@ class Text(Artist):
             # position in Text, and dash position in TextWithDash:
             posx = float(textobj.convert_xunits(textobj._x))
             posy = float(textobj.convert_yunits(textobj._y))
+            posxangle = posx + 1
+            posyangle = posy
             if not np.isfinite(posx) or not np.isfinite(posy):
                 raise ValueError("posx and posy should be finite values")
             posx, posy = trans.transform_point((posx, posy))
+            transangle = 0
+            if self.get_trans_rotate():
+                posxangle, posyangle = trans.transform_point(
+                                        (posxangle, posyangle))
+                transangle = math.atan2(posyangle - posy, posxangle - posx)
             canvasw, canvash = renderer.get_canvas_width_height()
 
             # draw the FancyBboxPatch
